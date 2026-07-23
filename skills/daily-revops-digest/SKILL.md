@@ -1,6 +1,6 @@
 ---
 name: daily-revops-digest
-description: Daily RevOps process health digest. Runs all QC checks in sequence, summarizes findings, and outputs a prioritized next-steps list with links and fix instructions. Run every morning before standup or planning work.
+description: Daily RevOps process health digest. Runs all active QC checks in sequence, summarizes findings, and outputs a prioritized next-steps list with links and fix instructions. Run every morning before standup or planning work. Note: bonus-commission-match is temporarily excluded pending SNOW_CERTIFIED_SENSITIVE access.
 metadata:
   type: orchestrator
   domain: RevOps
@@ -9,7 +9,7 @@ metadata:
     - territory-profile-match
     - se-group-populated
     - roster-changes
-    - bonus-commission-match
+    # - bonus-commission-match  (excluded: SNOW_CERTIFIED_SENSITIVE access pending)
 ---
 
 # Skill: Daily RevOps Process Health Digest
@@ -160,44 +160,19 @@ Verified lookup: [`workday_new_hires_and_transfers_last_14_days.sql`](../../veri
 
 ---
 
-## Step 4 — Bonus / Commission Match (Pigment)
+## Step 4 — Bonus / Commission Match ⚠️ TEMPORARILY EXCLUDED
 
-Run this SQL and review the distribution:
-
-```sql
--- SUMMARY: Pigment comp type distribution
-SELECT
-    CASE
-        WHEN COALESCE(COMMISSION_ANNUAL_TARGET_USD, 0) > 0
-         AND (COALESCE(BONUS_MULTI_YEAR, FALSE) OR COALESCE(BONUS_PS_T, FALSE)) THEN 'Commission + Bonus'
-        WHEN COALESCE(COMMISSION_ANNUAL_TARGET_USD, 0) > 0                       THEN 'Commission'
-        WHEN COALESCE(BONUS_MULTI_YEAR, FALSE) OR COALESCE(BONUS_PS_T, FALSE)    THEN 'Bonus'
-        ELSE 'Neither'
-    END AS pig_comp_type,
-    COUNT(*) AS employee_count
-FROM IT.PIGMENT.SALES_ROSTER_QUOTA_SUMMARY_IN_YR
-WHERE ACTIVE_RECORD = TRUE
-  AND DS_DATE = (SELECT MAX(DS_DATE) FROM IT.PIGMENT.SALES_ROSTER_QUOTA_SUMMARY_IN_YR WHERE ACTIVE_RECORD = TRUE)
-GROUP BY 1 ORDER BY employee_count DESC;
-```
-
-**Pass condition:** `Neither` count is 0 or expected (role-based exemptions only).
-
-**If `Neither` count is unexpectedly high — next steps:**
-
-| Issue | Fix | Where |
-|---|---|---|
-| Employees showing `Neither` who should be on a plan | Assign comp plan in Pigment quota planning | [Pigment Quota Plans](https://app.pigment.com) |
-| `XACTLY_PLAN_STATUS` not `APPROVED` | Push and approve comp plan in Xactly | [Xactly Connect](https://connect.xactlycorp.com) |
-
-Full detail query: [`bonus-commission-match`](../bonus-commission-match/SKILL.md)
-Verified lookups: [`pigment_bonus_commission_eligibility_by_employee.sql`](../../verified_queries/pigment_bonus_commission_eligibility_by_employee.sql) · [`workday_bonus_eligibility_by_employee.sql`](../../verified_queries/workday_bonus_eligibility_by_employee.sql)
+> **Access blocked:** This check requires `SNOW_CERTIFIED_SENSITIVE` role access which is not yet provisioned.
+> Re-enable once access is confirmed by uncommenting `bonus-commission-match` in the metadata and restoring this step.
+>
+> Skill is ready: [`bonus-commission-match`](../bonus-commission-match/SKILL.md)
+> Verified queries: [`pigment_bonus_commission_eligibility_by_employee.sql`](../../verified_queries/pigment_bonus_commission_eligibility_by_employee.sql) · [`workday_bonus_eligibility_by_employee.sql`](../../verified_queries/workday_bonus_eligibility_by_employee.sql)
 
 ---
 
 ## Consolidated next-steps template
 
-After running all four checks, copy this template into your standup notes or Jira:
+After running all three active checks, copy this template into your standup notes or Jira:
 
 ```
 ## RevOps Daily QC — [DATE]
@@ -218,8 +193,7 @@ After running all four checks, copy this template into your standup notes or Jir
 - [ ] Transfers Out: X — deactivate / reassign records
 
 ### Bonus / Commission (Pigment)
-- [ ] Neither comp type: X employees — assign comp plan
-- [ ] Pending Xactly approval: X plans — push to Xactly
+- [ ] SKIPPED — pending SNOW_CERTIFIED_SENSITIVE access (re-enable Step 4 when resolved)
 ```
 
 ---
